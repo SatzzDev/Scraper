@@ -3,101 +3,149 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Love Messages Editor</title>
+<title>Open Quotes Api</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
 </head>
 <body>
-
-<h1>Love Messages Editor</h1>
-
-<div id="messages-container">
-    <!-- Messages will be displayed here -->
+<div class="container">
+<h1 class="display-4">Open Quotes Api</h1>
+<div id="messages-container" class="mt-4">
+<!-- messages will be displayed here -->
 </div>
-
-<form id="message-form">
-    <label for="creator">Creator:</label>
-    <input type="text" id="creator" name="creator" required><br><br>
-    
-    <label for="message">Message:</label><br>
-    <textarea id="message" name="message" rows="4" cols="50" required></textarea><br><br>
-    
-    <button type="submit">Submit</button>
+<form id="message-form" class="mt-4">
+<div class="form-group">
+<label for="author">Author:</label>
+<input type="text" id="author" name="author" class="form-control" required>
+</div>
+<div class="form-group">
+<label for="quotes">Quotes:</label>
+<textarea id="quotes" name="quotes" class="form-control" rows="4" cols="50" required></textarea>
+</div>
+<button type="submit" class="btn btn-primary">Submit</button>
 </form>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Fetch initial JSON data from GitHub
-    fetch('https://raw.githubusercontent.com/SatzzDev/Scraper/main/quotes.json')
-        .then(response => response.json())
+</div>
+   <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Fetch initial data from GitHub and display messages
+      fetch('https://raw.githubusercontent.com/SatzzDev/Scraper/main/quotes.json')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch initial data');
+          }
+          return response.json();
+        })
         .then(data => {
-            const messagesContainer = document.getElementById('messages-container');
-            // Display existing messages
-            data.forEach(message => {
-                messagesContainer.innerHTML += `
-                    <div>
-                        <strong>Quotes:</strong> ${message.quotes}<br><br>
-                        <strong>Author:</strong> ${message.author}<br>
-                    </div>
-                `;
-            });
+          const messagesContainer = document.getElementById('messages-container');
+          data.forEach(message => {
+            messagesContainer.innerHTML += `
+              <div>
+                <strong>Quotes:</strong> ${message.quotes}<br><br>
+                <strong>Author:</strong> ${message.author}<br>
+              </div>
+            `;
+          });
+        })
+        .catch(error => {
+          console.error('Error fetching initial data:', error);
+          // Handle error: Show error message or handle retry logic
         });
 
-    // Handle form submission to add new message
-    const messageForm = document.getElementById('message-form');
-    messageForm.addEventListener('submit', function(event) {
+      // Handle form submission to add a new message
+      const messageForm = document.getElementById('message-form');
+      messageForm.addEventListener('submit', function(event) {
         event.preventDefault(); // Prevent default form submission
-        
-        // Get input values
-        const creatorInput = document.getElementById('creator').value;
-        const messageInput = document.getElementById('message').value;
 
-        // Create new message object
+        // Get input values
+        const creatorInput = document.getElementById('author').value;
+        const messageInput = document.getElementById('quotes').value;
+
+        // Prepare new message object
         const newMessage = {
-            "author": creatorInput,
-            "quotes": messageInput
+          author: creatorInput,
+          quotes: messageInput
         };
 
-        // Fetch current file details from GitHub to get SHA
-        fetch('https://api.github.com/repos/SatzzDev/Scraper/contents/quotes.json')
-            .then(response => response.json())
-            .then(data => {
+        // Fetch current content of quotes.json to update
+        fetch('https://raw.githubusercontent.com/SatzzDev/Scraper/main/quotes.json')
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to fetch current file content');
+            }
+            return response.json();
+          })
+          .then(data => {
+            // Update the data with the new message
+            data.push(newMessage);
+
+            // Encode the updated data to Base64
+            const updatedContent = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+
+            // Fetch current file details from GitHub to get SHA
+            fetch('https://api.github.com/repos/SatzzDev/Scraper/contents/quotes.json')
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error('Failed to fetch file details');
+                }
+                return response.json();
+              })
+              .then(fileDetails => {
                 // Update file on GitHub
                 fetch('https://api.github.com/repos/SatzzDev/Scraper/contents/quotes.json', {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': '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', // Replace with your GitHub personal access token
-                        'Content-Type': 'application/json'
+                  method: 'PUT',
+                  headers: {
+                    'Accept': 'application/vnd.github+json',
+                    'Authorization': 'Bearer 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', // Replace with your GitHub personal access token
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    message: 'Update quotes.json',
+                    committer: {
+                      name: 'SatzzDev (bot)',
+                      email: 'satganzevs@gmail.com'
                     },
-                    body: JSON.stringify({
-                        message: 'Update quotes.json',
-                        content: btoa(JSON.stringify([...data, newMessage])), // Append new message to existing data
-                        sha: data.sha // Use the SHA of the current file
-                    })
+                    content: updatedContent,
+                    sha: fileDetails.sha // Use the SHA of the current file
+                  })
                 })
-                .then(response => response.json())
+                .then(response => {
+                  if (!response.ok) {
+                    throw new Error('Failed to update file');
+                  }
+                  return response.json();
+                })
                 .then(data => {
-                    console.log('File updated successfully:', data);
+                  console.log('File updated successfully:', data);
+                  // Clear form inputs
+                  document.getElementById('author').value = '';
+                  document.getElementById('quotes').value = '';
 
-                    // Display newly added message on the page
-                    const messagesContainer = document.getElementById('messages-container');
-                    messagesContainer.innerHTML += `
-                        <div>
-                            <strong>Quotes:</strong> ${newMessage.quotes}<br><br>
-                            <strong>Author:</strong> ${newMessage.author}<br>
-                        </div>
-                    `;
-
-                    // Clear input fields after submission
-                    creatorInput.value = '';
-                    messageInput.value = '';
+                  // Display the newly added message in the UI
+                  const messagesContainer = document.getElementById('messages-container');
+                  messagesContainer.innerHTML += `
+                    <div>
+                      <strong>Quotes:</strong> ${newMessage.quotes}<br><br>
+                      <strong>Author:</strong> ${newMessage.author}<br>
+                    </div>
+                  `;
                 })
                 .catch(error => {
-                    console.error('Error updating file:', error);
-                    // Handle error scenario
+                  console.error('Error updating file:', error);
+                  // Handle error: Show error message or handle retry logic
                 });
-            });
+              })
+              .catch(error => {
+                console.error('Error fetching file details:', error);
+                // Handle error: Show error message or handle retry logic
+              });
+          })
+          .catch(error => {
+            console.error('Error fetching current file content:', error);
+            // Handle error: Show error message or handle retry logic
+          });
+      });
     });
-});
-</script>
+    </script>
+
 
 </body>
 </html>
