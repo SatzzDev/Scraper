@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Love Messages Editor</title>
+</head>
+<body>
+
+<h1>Love Messages Editor</h1>
+
+<div id="messages-container">
+    <!-- Di sini nanti akan ditampilkan pesan-pesan dari JSON -->
+</div>
+
+<form id="message-form">
+    <label for="creator">Creator:</label>
+    <input type="text" id="creator" name="creator" required><br><br>
+    
+    <label for="message">Message:</label><br>
+    <textarea id="message" name="message" rows="4" cols="50" required></textarea><br><br>
+    
+    <button type="submit">Submit</button>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Ambil data JSON dari GitHub menggunakan fetch
+    fetch('https://raw.githubusercontent.com/username/repository/main/messages.json')
+        .then(response => response.json())
+        .then(data => {
+            const messagesContainer = document.getElementById('messages-container');
+            messagesContainer.innerHTML = ''; // Kosongkan kontainer pesan sebelum menambahkan yang baru
+            data.forEach(message => {
+                messagesContainer.innerHTML += `
+                    <div>
+                        <strong>Creator:</strong> ${message.creator}<br>
+                        <strong>Message:</strong> ${message.data}<br><br>
+                    </div>
+                `;
+            });
+        });
+
+    // Tangani submit form untuk menambahkan pesan baru
+    const messageForm = document.getElementById('message-form');
+    messageForm.addEventListener('submit', function(event) {
+        event.preventDefault(); // Mencegah form untuk melakukan submit default
+        
+        const creatorInput = document.getElementById('creator').value;
+        const messageInput = document.getElementById('message').value;
+
+        // Buat objek pesan baru
+        const newMessage = {
+            "author": creatorInput,
+            "quotes": messageInput
+        };
+
+        // Kirim data baru ke GitHub menggunakan fetch dengan metode PUT
+        fetch('https://api.github.com/repos/SatzzDev/quoted/contents/quotes.json', {
+            method: 'PUT',
+            headers: {
+                'Authorization': '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', // Ganti dengan personal access token GitHub Anda
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: 'Update messages.json',
+                content: btoa(JSON.stringify([...data, newMessage])), // Encode data baru ke base64
+                sha: 'SHA_OF_CURRENT_FILE' // Ganti dengan SHA file JSON saat ini, bisa didapatkan dengan mengambilnya dari GitHub API atau manual
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('File updated successfully:', data);
+            // Tambahan: Tampilkan pesan bahwa data berhasil ditambahkan
+            const messagesContainer = document.getElementById('messages-container');
+            messagesContainer.innerHTML += `
+                <div>
+                    <strong>Creator:</strong> ${newMessage.creator}<br>
+                    <strong>Message:</strong> ${newMessage.data}<br><br>
+                </div>
+            `;
+            // Hapus nilai input setelah submit
+            creatorInput.value = '';
+            messageInput.value = '';
+        })
+        .catch(error => {
+            console.error('Error updating file:', error);
+            // Tambahan: Tampilkan pesan error kepada pengguna
+        });
+    });
+});
+</script>
+
+</body>
+</html>
