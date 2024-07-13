@@ -10,7 +10,7 @@
 <h1>Love Messages Editor</h1>
 
 <div id="messages-container">
-    <!-- Di sini nanti akan ditampilkan pesan-pesan dari JSON -->
+    <!-- Messages will be displayed here -->
 </div>
 
 <form id="message-form">
@@ -25,68 +25,76 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Ambil data JSON dari GitHub menggunakan fetch
-    fetch('https://raw.githubusercontent.com/username/repository/main/messages.json')
+    // Fetch initial JSON data from GitHub
+    fetch('https://raw.githubusercontent.com/SatzzDev/Scraper/main/quotes.json')
         .then(response => response.json())
         .then(data => {
             const messagesContainer = document.getElementById('messages-container');
-            messagesContainer.innerHTML = ''; // Kosongkan kontainer pesan sebelum menambahkan yang baru
+            // Display existing messages
             data.forEach(message => {
                 messagesContainer.innerHTML += `
                     <div>
-                        <strong>Creator:</strong> ${message.creator}<br>
-                        <strong>Message:</strong> ${message.data}<br><br>
+                        <strong>Quotes:</strong> ${message.quotes}<br><br>
+                        <strong>Author:</strong> ${message.author}<br>
                     </div>
                 `;
             });
         });
 
-    // Tangani submit form untuk menambahkan pesan baru
+    // Handle form submission to add new message
     const messageForm = document.getElementById('message-form');
     messageForm.addEventListener('submit', function(event) {
-        event.preventDefault(); // Mencegah form untuk melakukan submit default
+        event.preventDefault(); // Prevent default form submission
         
+        // Get input values
         const creatorInput = document.getElementById('creator').value;
         const messageInput = document.getElementById('message').value;
 
-        // Buat objek pesan baru
+        // Create new message object
         const newMessage = {
             "author": creatorInput,
             "quotes": messageInput
         };
 
-        // Kirim data baru ke GitHub menggunakan fetch dengan metode PUT
-        fetch('https://api.github.com/repos/SatzzDev/quoted/contents/quotes.json', {
-            method: 'PUT',
-            headers: {
-                'Authorization': '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', // Ganti dengan personal access token GitHub Anda
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: 'Update messages.json',
-                content: btoa(JSON.stringify([...data, newMessage])), // Encode data baru ke base64
-                sha: 'SHA_OF_CURRENT_FILE' // Ganti dengan SHA file JSON saat ini, bisa didapatkan dengan mengambilnya dari GitHub API atau manual
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('File updated successfully:', data);
-            // Tambahan: Tampilkan pesan bahwa data berhasil ditambahkan
-            const messagesContainer = document.getElementById('messages-container');
-            messagesContainer.innerHTML += `
-                <div>
-                    <strong>Creator:</strong> ${newMessage.creator}<br>
-                    <strong>Message:</strong> ${newMessage.data}<br><br>
-                </div>
-            `;
-            // Hapus nilai input setelah submit
-            creatorInput.value = '';
-            messageInput.value = '';
-        })
-        .catch(error => {
-            console.error('Error updating file:', error);
-            // Tambahan: Tampilkan pesan error kepada pengguna
-        });
+        // Fetch current file details from GitHub to get SHA
+        fetch('https://api.github.com/repos/SatzzDev/Scraper/contents/quotes.json')
+            .then(response => response.json())
+            .then(data => {
+                // Update file on GitHub
+                fetch('https://api.github.com/repos/SatzzDev/Scraper/contents/quotes.json', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': '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', // Replace with your GitHub personal access token
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Update quotes.json',
+                        content: btoa(JSON.stringify([...data, newMessage])), // Append new message to existing data
+                        sha: data.sha // Use the SHA of the current file
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('File updated successfully:', data);
+
+                    // Display newly added message on the page
+                    const messagesContainer = document.getElementById('messages-container');
+                    messagesContainer.innerHTML += `
+                        <div>
+                            <strong>Quotes:</strong> ${newMessage.quotes}<br><br>
+                            <strong>Author:</strong> ${newMessage.author}<br>
+                        </div>
+                    `;
+
+                    // Clear input fields after submission
+                    creatorInput.value = '';
+                    messageInput.value = '';
+                })
+                .catch(error => {
+                    console.error('Error updating file:', error);
+                    // Handle error scenario
+                });
+            });
     });
 });
 </script>
